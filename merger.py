@@ -2,127 +2,108 @@ import numpy as np
 from scipy.integrate import quad
 from matplotlib.pyplot import figure, show
 
+import general as ge
 import coefficients as cf
 import inspiral as ip
 import boundaries as bo
 
 
-def omegaQNM(eta):
-    """ Determine parameter omega_QNM """
-    return 1 - 0.63 * np.power(1 - cf.sfin(eta), 0.3)
 
-
-def f_hat(t, m1, m2):
-    """ Determine the function f^hat"""
+class merger_wave(object):
+    """ Class for merging gravitational waves """
     
-    eta = ip.eta(m1, m2)
+    def __init__(self, m1, m2):
+        """ Initialization """
+        
+        self.m1, self.m2 = m1.kg, m2.kg                     # Masses in kg
+        self.M = self.tot_m()                               # Total mass
+        
+        self.d1, self.d2 = m1.dist, m2.dist             # Masses in meters
+        self.t1, self.t2 = m1.time, m2.time             # Masses in seconds
+        
+        self.etaV = self.eta()                          # eta
     
-    kappa = cf.kappa(eta)                       # Coefficient kappa
-    b = cf.b(eta)                               # Coefficient b
-    cCoef = cf.cCoef(eta)                       # Coefficient c
     
-    part1 = cCoef * np.power(1 + 1/kappa, 1 + kappa) / 2
-    part2 = 1 + np.exp(-2 * t / b) / kappa
+    def tot_m(self):
+        return self.m1 + self.m2
     
-    return part1 * (1 - np.power(part2, -kappa))
-
-
-def omega(t, m1, m2):
-    """ Find omega(t) """
-    eta = ip.eta(m1, m2)
-    return omegaQNM(eta) * (1 - f_hat(t, m1, m2))
-
-
-def find_dif(y, t):
-    """ Differentiate a function, y, w.r.t. time, t """
+    def eta(self):
+        return self.m1 * self.m2 / np.power(self.M, 2)
     
-    yVals = np.diff(y) / np.diff(t)             # y values
-#     tVals = (t[1:] + t[:-1]) / 2                # t values
+    def omegaQNM(self):
+        """ Determine parameter omega_QNM """
+        return 1 - 0.63 * np.power(1 - cf.sfin(self.etaV), 0.3)
     
-    return yVals#, tVals
-
-
-def phi_gIRS(tStart, tFin, m1, m2):
-    """ Find the phase by integrating the function omega(t) """
+    def f_hat(self, t):
+        """ Determine the function f^hat """
+        
+            # Coefficients
+        etaV = self.etaV                                # eta
+        kappa = cf.kappa(etaV)                          # Coefficient kappa
+        b = cf.b(etaV)                                  # Coefficient b
+        cCoef = cf.cCoef(etaV)                          # Coefficient c
+        
+            # Computing f^hat
+        part1 = cCoef * np.power(1 + 1/kappa, 1 + kappa) / 2
+        part2 = 1 + np.exp(-2 * t / b) / kappa
+        
+        return part1 * (1 - np.power(part2, -kappa))
     
-    etaV = ip.eta(m1, m2)                                  # eta parameter
-    phiVals = quad(omega, tStart, tFin, args=(m1, m2))    # Integrating
+    def omega(self, t):
+        """ Find omega(t) """
+        return self.omegaQNM() * (1 - self.f_hat(t))
     
-    return phiVals[0]
-
-
-def A(t, A0, m1, m2):
-    """ Amplitude as function of time """
+    def phi_gIRS(self, tStart, tFin):
+        """ Find the phase by integrating the function omega(t) """
+        return quad(self.omega, tStart, tFin)[0]
     
-    etaV = ip.eta(m1, m2)                                  # eta parameter
-    alpha = cf.alpha(etaV)                               # alpha coefficient
-    omegaT = omega(t, m1, m2)                              # omega(t)
+    def A(self, t):
+        """ Amplitude as function of time """
+        
+        A0 = 1 / (self.t1 + self.t2)                    # Amplitude
+        alpha = cf.alpha(self.etaV)                     # alpha coefficient
+        omegaT = self.omega(t)                          # omega(t)
+        
+        func = self.f_hat(t)                            # function f^hat
+        difFunc = ge.diff_func(func, t)                  # df^hat/dt
+        
+        denomP = np.power(func, 2) + np.power(func, 4)      # Part of denom.
+        part1 = np.abs(difFunc) / (1 + alpha * denomP[1:])  # Part of equation
+        
+        return A0 * np.sqrt(part1) / omegaT[1:]
     
-    func = f_hat(t, m1, m2)                                # function f^hat
-    difFunc = find_dif(func, t)                         # df^hat/dt
-    
-    denomP = np.power(func, 2) + np.power(func, 4)      # Part of denominator
-    part1 = np.abs(difFunc) / (1 + alpha * denomP[1:])      # Part of equation
-    
-    return A0 * np.sqrt(part1) / omegaT[1:]
-
-
-def hMerger(t, A0, m1, m2):
-    """ Waveform strain """
-    
-    tS, tF = t[0], t[-1]                                # Start & end times
-    
-    aT = A(t, A0, m1, m2)                               # Amplitude
-    
-    phiVals = []
-    for ind in range(len(t)):
-        phigIRS = phi_gIRS(t[0], t[ind], m1, m2)               # Phase
-        phiVals.append(phigIRS)
-    
-    phiRes = np.asarray(phiVals[:-1])
-    
-        # e^(-ix) = cos(x) - i sin(x)
-    realMerg = aT * np.cos(phiRes)                     # Real part
-    imgMerg = -aT * np.sin(phiRes)                     # Imaginary part
-    
-    return realMerg, imgMerg
+    def hMerger(self, t):
+        """ Waveform strain """
+        
+        t = t / (self.t1 + self.t2)
+        tS, tF = t[0], t[-1]                            # Start & end times
+        aT = self.A(t)                                  # Amplitude
+        
+        phiVals = []
+        for ind in range(len(t)):
+            phigIRS = self.phi_gIRS(t[0], t[ind])       # Phase
+            phiVals.append(phigIRS)
+        
+        phiRes = np.asarray(phiVals[:-1])
+        
+            # e^(-ix) = cos(x) - i sin(x)
+        realMerg = aT * np.cos(phiRes)                  # Real part
+        imgMerg = -aT * np.sin(phiRes)                  # Imaginary part
+        
+        return t, realMerg, imgMerg
 
 
 def main():
 
     M1 = bo.geom_units(20)
     M2 = bo.geom_units(20)
-    M = bo.geom_units(40)
-    timeRange = np.linspace(-0.05, 0.05, 1000)
     
-    unitLessTime = timeRange / M.mass_time()
-    A0 = 1 / M.mass_time()
+    timeRange = np.linspace(-0.05, 0.05, 1000)          # Units M_sun
     
-    aVals = A(unitLessTime, A0, M1.mass_time(), M2.mass_time())
-    realH, imgH = hMerger(unitLessTime, A0, M1.mass_time(), M2.mass_time())
+    mergeWave = merger_wave(M1, M2)                     # Initializing wave
+    ampVals = mergeWave.A(timeRange)                    # Amplitude
+    unitLessTime, hP, hC = mergeWave.hMerger(timeRange) # Waves
     
-    # Plotting
-    fig = figure(figsize=(14,7))
-    ax = fig.add_subplot(1,1,1)
-    
-    ax.plot(unitLessTime[:-1], aVals/max(aVals), label="A(t)")
-#     ax.plot(unitLessTime[1:], imgH/max(abs(imgH)), ls="--", label=r"$h_x$", 
-#             color="red")
-#     ax.plot(unitLessTime[1:], realH/max(abs(imgH)), label=r"$h_+$", color="navy")
-    
-    ax.set_xlabel(r"$t$ (M$_\odot$)", fontsize=15)
-    ax.set_ylabel(r"$A$ (normalized)", fontsize=15)
-    ax.tick_params(axis="both", labelsize=15)
-#     ax.set_title(r"dashed = h$_x$, solid = h$_+$", fontsize=15)
-    
-    ax.set_xlim(-100, 100)
-    
-    ax.grid()
-    ax.legend(fontsize=15)
-    
-    fig.tight_layout()
-#     fig.savefig("amplitude.png")
-    
-    show()
 
-main()
+if __name__ == "__main__":
+    main()

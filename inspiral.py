@@ -36,6 +36,7 @@ class inspiral_wave(object):
         """ Differential equation dx/dt """
         
         etaV = self.etaV                                    # eta
+        
         term1 = 64 * etaV * np.power(x, 5) / 5              # Term in front
         
         sum1 = 1                                            # First term in sum
@@ -58,18 +59,18 @@ class inspiral_wave(object):
         
         totSum = part1 + part2                              # Total sum
         
-        return term1 * totSum / self.M
+        return term1 * totSum / (self.t1 + self.t2)
     
     
     def deriv_phi(self, t, phi, x):
         """ Differential equation dPhi/dt """
-        return np.power(x, 1.5) / self.M
+        return np.power(x, 1.5) / (self.t1 + self.t2)
     
     
     def r_x(self, x):
         """ r as a function of x"""
         
-        M = self.M                                          # Total mass
+        M = self.d1 + self.d2                               # Total mass
         etaV = self.etaV                                    # eta
         
         part1 = 1 / x + cf.r1(etaV) + cf.r2(etaV) * x       # First part
@@ -125,11 +126,6 @@ class solve_inspiral(object):
     def __init__(self, m1, m2, tSteps, tLims):
         """ Initialization """
         
-            # Masses in units
-#         self.m1 = m1.kg                                 # Primary mass
-#         self.m2 = m2.kg                                 # Secondary mass
-#         self.M = self.tot_m()                           # Total mass
-        
             # Initializing the inspiral wave
         self.wave = inspiral_wave(m1, m2)               # Initializing the wave
         self.etaV = self.wave.etaV                         # eta
@@ -151,7 +147,7 @@ class solve_inspiral(object):
             # time and x values
         self.tV, self.xV = self.execute()
         
-        if self.determine_steps() == 0: self.x2V = self.xV
+        if self.determine_steps(): self.x2V = self.xV
         else: self.x2V = self.xV[-1]
         
     
@@ -164,12 +160,14 @@ class solve_inspiral(object):
     
     def determine_steps(self):
         """ Check if multiple steps are given """
-        if type(self.steps) == float: return 0
-        return 1
+        if type(self.steps) == float: return 1
+        return 0
+        
+# 
     
     def execute(self):
         """ Execute solver """
-        if self.determine_steps() == 0:
+        if self.determine_steps():
             return ge.execute_solver(self.wave.deriv_x, self.steps, self.lims, 
                                      self.x0)
         
@@ -197,23 +195,24 @@ class solve_inspiral(object):
     
     def func_phi(self, phi0):
         """ Find function phi """
-        if self.determine_steps() == 0:
+        if self.determine_steps():
             return self.wave.find_phi(self.xV, self.steps, self.lims, phi0)
         
         p0 = phi0
         tList, phiList = [], []
         
         for ind in range(len(self.steps)):
-            tRange, phiRange = wave.find_phi(self.x2V[ind], self.steps[ind], 
-                                             self.lims[ind], p0)
+            tRange, phiRange = self.wave.find_phi(self.xV[ind], self.steps[ind], 
+                                                  self.lims[ind], p0)
             
             tList.append(tRange)
             phiList.append(phiRange)
             
             p0 = phiRange[-1]
         
-        return tList, phiList
+        return tList[-1], phiList[-1]
     
+
     def h_wave(self, R, phi0=0):
         """ Find h+ and hx wave polarizations """
         
@@ -268,48 +267,21 @@ def main():
     xStart = bo.x_low(M1.mass_kg(), M2.mass_kg())
     phiStart = 0
     
-    someWave = solve_inspiral(M1, M2, tStep, tLimits)
-    timeRange, hPlus, hCross = someWave.h_wave(R)
+    stepList = [t1Step, t2Step, t3Step]
+    limList = [t1Lim, t2Lim, t3Lim]
     
-#     tRange, xValues = execute_solver(deriv_x, tStep, tLimits, xStart, 
-#                                      M1.mass_time(), M2.mass_time())
+#     someWave = solve_inspiral(M1, M2, tStep, tLimits)
+#     timeRange, hPlus, hCross = someWave.h_wave(R)
     
-#     m1T, m2T = M1.mass_time(), M2.mass_time()
-#     m1D, m2D = M1.mass_dist(), M2.mass_dist()
-#     
-#     t1R, t1V = execute_solver(deriv_x, t1Step, t1Lim, xStart, m1T, m2T)
-#     t2R, t2V = execute_solver(deriv_x, t2Step, t2Lim, t1V[-1], m1T, m2T)
-#     t3R, t3V = execute_solver(deriv_x, t3Step, t3Lim, t2V[-1], m1T, m2T)
-#     
-#     r1R = r_x(t1V, m1D, m2D)
-#     r2R = r_x(t2V, m1D, m2D)
-#     r3R = r_x(t3V, m1D, m2D)
-#     
-#     der1R = diff_func(r1R, t1R)
-#     der2R = diff_func(r2R, t2R)
-#     der3R = diff_func(r3R, t3R)
-#     
-#     d1P = np.power(t1V, 1.5) / (m1T + m2T)
-#     d2P = np.power(t2V, 1.5) / (m1T + m2T)
-#     d3P = np.power(t3V, 1.5) / (m1T + m2T)
-#     
-#     t11, t1P = find_phi(t1V, t1Step, t1Lim, 0, m1T, m2T)
-#     t22, t2P = find_phi(t2V, t2Step, t2Lim, t1P[-1], m1T, m2T)
-#     t33, t3P = find_phi(t3V, t3Step, t3Lim, t2P[-1], m1T, m2T)
-#     
-#     h3P = hplus(r3R[1:], der3R, t3P[1:], d3P[1:], R, m1D, m2D)
-#     h3C = hcross(r3R[1:], der3R, t3P[1:], d3P[1:], R, m1D, m2D)
-    
-    
-    
+    multWave = solve_inspiral(M1, M2, stepList, limList)
+    timeRange, hPlus, hCross = multWave.h_wave(R)
+
     
     # Plotting
     fig = figure(figsize=(14,7))
     ax = fig.add_subplot(1,1,1)
     
-#     ax.plot(t2R, t2V, label="2")
-#     ax.plot(t3R, t3V, label="3")
-    ax.plot(timeRange[1:], hPlus/max(hCross), label=r"$h_x$", ls="--", color="red")
+    ax.plot(timeRange[1:], hCross/max(hCross), label=r"$h_x$", ls="--", color="red")
     ax.plot(timeRange[1:], hPlus/max(hCross), label=r"$h_+$", color="navy")
     
     ax.set_xlim(11.7, 11.926)
