@@ -98,11 +98,11 @@ def main():
     M1 = bo.geom_units(20)
     M2 = bo.geom_units(20)
     
-    timeRange = np.linspace(-0.05, 0.05, 1000)          # Time in units of M_sun
+    timeRange = np.linspace(-0.05, 0.05, 1000)          # Units M_sun
     
-    mergeWave = merger_wave(M1, M2)
-    ampVals = mergeWave.A(timeRange)
-    unitLessTime, hP, hC = mergeWave.hMerger(timeRange)
+    mergeWave = merger_wave(M1, M2)                     # Initializing wave
+    ampVals = mergeWave.A(timeRange)                    # Amplitude
+    unitLessTime, hP, hC = mergeWave.hMerger(timeRange) # Waves
     
 
 if __name__ == "__main__":
