@@ -4,7 +4,6 @@ from matplotlib.pyplot import figure, show
 
 import general as ge
 import coefficients as cf
-import inspiral as ip
 import boundaries as bo
 
 
@@ -67,7 +66,7 @@ class merger_wave(object):
         func = self.f_hat(t)                            # function f^hat
         difFunc = ge.diff_func(func, t)                  # df^hat/dt
         
-        denomP = np.power(func, 2) + np.power(func, 4)      # Part of denom.
+        denomP = np.power(func, 2) - np.power(func, 4)      # Part of denom.
         part1 = np.abs(difFunc) / (1 + alpha * denomP[1:])  # Part of equation
         
         return A0 * np.sqrt(part1) / omegaT[1:]

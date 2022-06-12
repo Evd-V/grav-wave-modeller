@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.constants import G, c
+from scipy.constants import G
 from scipy.integrate import solve_ivp, quad
 from matplotlib.pyplot import figure, show
 
@@ -77,31 +77,29 @@ class inspiral_wave(object):
         part2 = cf.r3(etaV) * np.power(x, 2)                # Second part
         
         return M * (part1 + part2)
+        def amp(self, r, dr, dPhi, R):
+        """ Function to calculate A (t) """
+        
+        M = self.d1 + self.d2                               # Total mass in m
+        etaV = self.etaV                                    # eta
+        
+        const = -2 * etaV * M / R                           # M and R in meters
+        
+        A1 = const * (np.power(dr, 2) + np.power(r*dPhi, 2) + M/r)
+        A2 = const * 2 * r * dr * dPhi
+        
+        return A1, A2
     
     def hplus(self, r, dr, phi, dPhi, R):
         """ Plus polarization """
-        
-        M = self.d1 + self.d2                               # Total mass
-        etaV = self.etaV                                    # eta
-        
-        term1 = -2 * etaV * M / R                           # M and R in meters
-        term2 = -np.power(dr, 2) + np.power(r*dPhi, 2) + M / r
-        term3 = 2 * r * dr * dPhi * np.sin(2 * phi)
-        
-        return term1 * (term2 * np.cos(2 * phi) + term3)
+        A1, A2 = self.amp(r, dr, dPhi, R)                   # Amplitudes
+        return A1 * np.cos(2 * phi) + A2 * np.sin(2 * phi)
     
     
     def hcross(self, r, dr, phi, dPhi, R):
         """ Cross polarization """
-        
-        M = self.d1 + self.d2                           # Total mass
-        etaV = self.etaV                                # eta
-        
-        term1 = -2 * etaV * M / R                       # M and R in meters
-        term2 = -np.power(dr, 2) + np.power(r*dPhi, 2) + M / r
-        term3 = -2 * r * dr * dPhi * np.cos(2 * phi)
-        
-        return term1 * (term2 * np.sin(2*phi) + term3)
+        A1, A2 = self.amp(r, dr, dPhi, R)                   # Amplitudes
+        return A1 * np.sin(2 * phi) - A2 * np.cos(2 * phi)
     
     
     def find_phi(self, xV, h, tLim, phi0):
@@ -110,7 +108,7 @@ class inspiral_wave(object):
         tNow = tLim[0]                                      # Lower time boundary
         
         tRange = np.arange(tLim[0], tLim[1]+h, h)           # Range of time values
-        yResults = [phi0]                                     # List with results
+        yResults = [phi0]                                   # List with results
         
         for ind in range(len(tRange)-1):
             yNew = ge.runga_kuta_solver(self.deriv_phi, h, tRange[ind], yResults[ind], 
@@ -128,7 +126,7 @@ class solve_inspiral(object):
         
             # Initializing the inspiral wave
         self.wave = inspiral_wave(m1, m2)               # Initializing the wave
-        self.etaV = self.wave.etaV                         # eta
+        self.etaV = self.wave.etaV                      # eta
         
         self.m1, self.m2 = m1.kg, m2.kg
         self.M = self.wave.M
@@ -157,13 +155,11 @@ class solve_inspiral(object):
     def x_end(self):
         return bo.x_high(self.etaV)
     
-    
     def determine_steps(self):
         """ Check if multiple steps are given """
         if type(self.steps) == float: return 1
         return 0
-        
-# 
+    
     
     def execute(self):
         """ Execute solver """
@@ -228,14 +224,6 @@ class solve_inspiral(object):
         return tRange, hP, hX
 
 
-def test_dif(t, x):
-    return np.cos(x)
-
-def analytical_sol(t):
-    """ Analytical solution of test func """
-    return 2 * np.arctan(np.tanh(0.5*t))
-
-
 def main():
     tTest = (0, 2*np.pi)
     sizeTest = 0.1
@@ -264,7 +252,6 @@ def main():
     t3Step = 0.00005
     t3Lim = (11.7, 11.924)
     
-    xStart = bo.x_low(M1.mass_kg(), M2.mass_kg())
     phiStart = 0
     
     stepList = [t1Step, t2Step, t3Step]
