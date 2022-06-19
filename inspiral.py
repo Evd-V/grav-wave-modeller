@@ -224,33 +224,22 @@ class solve_inspiral(object):
         return tRange, hP, hX
 
 
-def main():
-    tTest = (0, 2*np.pi)
-    sizeTest = 0.1
-    xTest = 0
-    tPoints = np.linspace(0, 2*np.pi, 500)
-    
-    anaSol = analytical_sol(tPoints)
-    
-    # yTest = execute_solver(test_dif, sizeTest, tTest, xTest)
-    tRangeTest = np.arange(0, 2*np.pi+sizeTest, sizeTest)
-    
+def main():   
     
     R = 2.4e22                                                  # Distance in m
     M1 = bo.geom_units(20)
     M2 = bo.geom_units(20)
     
+    mSec = M1.conv_kg_sec() + M2.conv_kg_sec()                  # Tot mass in s
+    tIsco = 2 * mSec                                            # Time ISCO
+    tStiff = 11.9257                                            # Stiff time
+    tFinal = tStiff - tIsco                                     # Final time
+    
     tStep = 0.001
-    tLimits = (0, 11.924)
+    tLimits = (0, 11.925)
     
-    t1Step = 0.01
-    t1Lim = (0, 11)
-    
-    t2Step = 0.001
-    t2Lim = (11, 11.7)
-    
-    t3Step = 0.00005
-    t3Lim = (11.7, 11.924)
+    t1Step, t2Step, t3Step = 0.01, 0.001, 0.00005
+    t1Lim, t2Lim, t3Lim = (0, 11), (11, 11.7), (11.7, tFinal)
     
     phiStart = 0
     
