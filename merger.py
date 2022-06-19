@@ -100,8 +100,9 @@ def main():
     timeRange = np.linspace(-0.05, 0.05, 1000)          # Units M_sun
     
     mergeWave = merger_wave(M1, M2)                     # Initializing wave
-    ampVals = mergeWave.A(timeRange)                    # Amplitude
     unitLessTime, hP, hC = mergeWave.hMerger(timeRange) # Waves
+    
+    ampVals = mergeWave.A(unitLessTime)                 # Amplitude
     
 
 if __name__ == "__main__":
