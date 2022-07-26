@@ -1,6 +1,9 @@
 import numpy as np
 
 
+def find_closest(array, value):
+    """ Find closest element to value in list """
+    return (np.abs(array - value)).argmin()
 
 
 def runga_kuta_solver(func, h, t0, y0, *args):
