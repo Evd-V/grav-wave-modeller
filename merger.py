@@ -74,16 +74,13 @@ class merger_wave(object):
     def hMerger(self, t):
         """ Waveform strain """
         
-        t = t / (self.t1 + self.t2)
-        tS, tF = t[0], t[-1]                            # Start & end times
+        t /= (self.t1 + self.t2)                        # Time units
         aT = self.A(t)                                  # Amplitude
         
-        phiVals = []
-        for ind in range(len(t)):
-            phigIRS = self.phi_gIRS(t[0], t[ind])       # Phase
-            phiVals.append(phigIRS)
-        
-        phiRes = np.asarray(phiVals[:-1])
+        phiVals = [self.phi_gIRS(t[0], t[ind])
+                   for ind in range(len(t))]            # Frequency
+
+        phiRes = np.asarray(phiVals[:-1])               # Slicing
         
             # e^(-ix) = cos(x) - i sin(x)
         realMerg = aT * np.cos(phiRes)                  # Real part
