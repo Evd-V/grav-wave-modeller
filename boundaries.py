@@ -47,28 +47,24 @@ class geom_units(object):
         return self.mass * M_sun.value
     
     
-    def conv_sec_m():
+    def conv_sec_m(self):
         """ convert seconds to meters """
         return c
     
-    def conv_m_sec():
+    def conv_m_sec(self):
         """ Convert meters to seconds """
         return 1 / c
     
     def conv_kg_m(self):
         """ Convert kg to meters """
-        return G * conv_m_sec()**2
+        return G * self.conv_m_sec()**2
     
     def conv_kg_sec(self):
         """ Convert kg to seconds """
-        return conv_kg_m() * conv_m_sec()
+        return self.conv_kg_m() * self.conv_m_sec()
     
     def mass_time(self):
         return self.kg * G * np.power(1/c, 3)
     
     def mass_dist(self):
         return self.kg * G * np.power(1/c, 2)
-
-
-
-
