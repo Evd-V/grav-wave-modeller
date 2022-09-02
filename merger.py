@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import quad
 from matplotlib.pyplot import figure, show
+import matplotlib
 
 import general as ge
 import coefficients as cf
@@ -94,12 +95,34 @@ def main():
     M1 = bo.geom_units(20)
     M2 = bo.geom_units(20)
     
-    timeRange = np.linspace(-0.05, 0.05, 1000)          # Units M_sun
+    # timeRange = np.linspace(-0.08725, 0.08725, 1000)          # Units M_sun
+    timeRange = np.linspace(-0.05, 0.05, 500)
+    testTime = np.copy(timeRange)
     
     mergeWave = merger_wave(M1, M2)                     # Initializing wave
     unitLessTime, hP, hC = mergeWave.hMerger(timeRange) # Waves
     
     ampVals = mergeWave.A(unitLessTime)                 # Amplitude
+
+    matplotlib.rcParams['font.family'] = ['Times']
+
+    # Plotting
+    fig = figure(figsize=(14,7))
+    ax = fig.add_subplot(1,1,1)
+
+    ax.plot(testTime[1:], hC/max(hC), color="r", ls="--", label=r"$h_x$")
+    ax.plot(testTime[1:], hP/max(hC), color="navy", label=r"$h_+$")
+
+    ax.set_xlabel(r"$t$ (s)", fontsize=20)
+    ax.set_ylabel("Strain (normalized)", fontsize=20)
+    ax.tick_params(axis="both", labelsize=22)
+
+    ax.grid()
+    ax.legend(fontsize=20)
+
+    fig.savefig("merger.png")
+
+    show()
     
 
 if __name__ == "__main__":

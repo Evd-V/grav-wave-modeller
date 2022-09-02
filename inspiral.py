@@ -2,6 +2,7 @@ import numpy as np
 from scipy.constants import G
 from scipy.integrate import solve_ivp, quad
 from matplotlib.pyplot import figure, show
+import matplotlib
 
 import general as ge
 import coefficients as cf
@@ -56,13 +57,13 @@ class inspiral_wave(object):
         
         part1 = sum1 + sum2 + sum3 + sum4 + sum5 + sum6 + sum7  # First major part
         part2 = sum8 + sum9 + sum10 + sum11 + sum12             # Second major part
-        
+
         totSum = part1 + part2                              # Total sum
         
         return term1 * totSum / (self.t1 + self.t2)
     
     
-    def deriv_phi(self, t, phi, x):
+    def deriv_phi(self, t, phi0, x):
         """ Differential equation dPhi/dt """
         return np.power(x, 1.5) / (self.t1 + self.t2)
     
@@ -77,7 +78,8 @@ class inspiral_wave(object):
         part2 = cf.r3(etaV) * np.power(x, 2)                # Second part
         
         return M * (part1 + part2)
-        def amp(self, r, dr, dPhi, R):
+    
+    def amp(self, r, dr, dPhi, R):
         """ Function to calculate A (t) """
         
         M = self.d1 + self.d2                               # Total mass in m
@@ -109,7 +111,7 @@ class inspiral_wave(object):
         
         tRange = np.arange(tLim[0], tLim[1]+h, h)           # Range of time values
         yResults = [phi0]                                   # List with results
-        
+
         for ind in range(len(tRange)-1):
             yNew = ge.runga_kuta_solver(self.deriv_phi, h, tRange[ind], yResults[ind], 
                                         xV[ind])
@@ -209,7 +211,7 @@ class solve_inspiral(object):
         return tList[-1], phiList[-1]
     
 
-    def h_wave(self, R, phi0=0):
+    def h_wave(self, R, phi0=15):
         """ Find h+ and hx wave polarizations """
         
         tRange, phiVals = self.func_phi(phi0)               # Phi
@@ -241,8 +243,6 @@ def main():
     t1Step, t2Step, t3Step = 0.01, 0.001, 0.00005
     t1Lim, t2Lim, t3Lim = (0, 11), (11, 11.7), (11.7, tFinal)
     
-    phiStart = 0
-    
     stepList = [t1Step, t2Step, t3Step]
     limList = [t1Lim, t2Lim, t3Lim]
     
@@ -250,27 +250,40 @@ def main():
 #     timeRange, hPlus, hCross = someWave.h_wave(R)
     
     multWave = solve_inspiral(M1, M2, stepList, limList)
+    tVals, xVals = multWave.execute()
+
+    # for ind, tR in enumerate(tVals):
+    #     print(np.mean(tR[1:]-tR[:-1]))
+    #     print(np.mean(xVals[ind][1:]-xVals[ind][:-1]))
+
+
     timeRange, hPlus, hCross = multWave.h_wave(R)
 
+    difX = ge.diff_func(np.asarray(xVals[-1]), np.asarray(tVals[-1]))
+
+    matplotlib.rcParams['font.family'] = ['Times']
     
     # Plotting
     fig = figure(figsize=(14,7))
     ax = fig.add_subplot(1,1,1)
-    
+
+    # ax.plot(tVals[-1], xVals[-1], color="navy")
+    # ax.plot(tVals[-1][1:], 1/(500*difX**2), label="deriv")
+
     ax.plot(timeRange[1:], hCross/max(hCross), label=r"$h_x$", ls="--", color="red")
     ax.plot(timeRange[1:], hPlus/max(hCross), label=r"$h_+$", color="navy")
     
     ax.set_xlim(11.7, 11.926)
     
-    ax.set_xlabel(r"$t$ (s)", fontsize=15)
-    ax.set_ylabel(r"$h$ inspiral (normalized)", fontsize=15)
-    ax.tick_params(axis="both", labelsize=15)
+    ax.set_xlabel(r"$t$ (s)", fontsize=20)
+    ax.set_ylabel(r"strain (normalized)", fontsize=20)
+    ax.tick_params(axis="both", labelsize=22)
     
     ax.grid()
-    ax.legend(fontsize=15)
+    ax.legend(fontsize=20)
     
     fig.tight_layout()
-#     fig.savefig("inspiral.png")
+    # fig.savefig("inspiral.png")
     
     show()
 
