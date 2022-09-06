@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import re
+import warnings
 from matplotlib.pyplot import figure, show
 
 import merger as mg
@@ -15,23 +15,20 @@ def save_data(m1, m2, tS=-.05, tF=.05):
     fName = dirName + "merger" + str(m1) + "_" + str(m2) + ".csv"
 
     M1, M2 = bo.geom_units(m1), bo.geom_units(m2)
-    waveObject = mg.merger_wave(M1, M2)                     # Creating merger wave object
-    timeRange = np.linspace(tS, tF, 250)                    # Default time range
+    waveObject = mg.merger_wave(M1, M2)             # Creating merger wave object
+    timeRange = np.linspace(tS, tF, 250)            # Default time range
     saveTime = np.copy(timeRange)
 
-    t, hP, hC = waveObject.hMerger(timeRange)        # Wave
+    t, hP, hC = waveObject.hMerger(timeRange)       # Wave
 
-    reshapedArray = np.reshape(np.array([saveTime[1:], hP, hC]), 
-                               (len(hP), 3))
+    np.savetxt(fName, np.array([*zip(*[timeRange[1:], hP, hC])]))
 
-    # np.savetxt(fName, reshapedArray)
-    np.savetxt(fName, np.array([timeRange[1:], hP, hC]))
 
 def read_data(m1, m2):
     """ Read data of merger """
 
         # Creating consistent file names
-    dirName = "./merger_data"
+    dirName = "./merger_data/"
     fName = dirName + "merger" + str(m1) + "_" + str(m2) + ".csv"
 
     data = np.loadtxt(fName, delimiter=" ")
@@ -69,7 +66,7 @@ def closest_ind(m, mList, ind):
 
     if mList[ind] > m: return [ind-1, ind]
     elif mList[ind] < m: return [ind, ind+1]
-    else: return [ind]                                 # No interpolation needed
+    else: return [ind]                          # No interpolation needed
 
 
 def find_inds(m1, m2):
@@ -81,10 +78,14 @@ def find_inds(m1, m2):
     secInd = (np.abs(secMass - m2)).argmin()    # Index for secondary mass
 
         # Finding two closest indices for primary & secondary mass
-    return closest_ind(m1, primMass, primInd), closest_ind(m2, secMass, secInd)
+    pr = closest_ind(m1, primMass, primInd)
+    sec = closest_ind(m2, secMass, secInd)
+
+        # Removing -1 indices and indices longer than list
+    return np.setdiff1d(pr, [-1, len(primMass)]), np.setdiff1d(sec, [-1, len(secMass)])
 
 
-def interp_data(m1, m2):
+def find_names(m1, m2):
     """ Interpolate data """
 
     if m1 < m2:
@@ -93,7 +94,22 @@ def interp_data(m1, m2):
     primMass, secMass = mass_ranges()       # Prim and sec masses in database
     primInd, secInd = find_inds(m1, m2)     # Find indices of closest values
 
-    fNames = []
+    if len(primInd) == 1:                   # Only 1 ind. found for primary
+        if (m1 not in primMass):            # Interpolation is required
+
+            string1 = "Only 1 suitable primary mass found,"
+            string2 = "interpolation might be innaccurate"
+            warnings.warn(string1 + string2)
+    
+    if len(secInd) == 1:                    # Only 1 ind. found for secondary
+        if (m2 not in secMass):             # Interpolation is required
+
+            string1 = "Only 1 suitable secondary mass found,"
+            string2 = "interpolation might be innaccurate"
+            warnings.warn(string1 + string2)
+
+
+    fNames = []                         # List for file names
 
         # Retrieving file names
     for mP in primMass[primInd]:        # Looping over primary masses
@@ -101,13 +117,14 @@ def interp_data(m1, m2):
         fName = "merger" + str(mP)      # Primary mass
 
         for mS in secMass[secInd]:      # Looping over secondary masses
-
+            
             fSec = fName + "_" + str(mS) + ".csv"
             fNames.append(fSec)
     
     return fNames
 
-
+def open_data(m1, m2):
+    return [np.loadtxt(f, delimiter='') for f in find_names(m1, m2)]
 
 
 def plot_data(m1, m2, saveFig=None):
@@ -119,8 +136,8 @@ def plot_data(m1, m2, saveFig=None):
     fig = figure(figsize=(14,7))
     ax = fig.add_subplot(111)
 
-    ax.plot(data[0], data[1], 'b', label=r"$h+$")
-    ax.plot(data[0], data[2], 'r--', label=r"$h_x$")
+    ax.plot(data[:,0], data[:,1], 'b', label=r"$h+$")
+    ax.plot(data[:,0], data[:,2], 'r--', label=r"$h_x$")
 
     ax.set_xlabel(r"Time ($M_\odot$)", fontsize=16)
     ax.set_ylabel("Amplitude", fontsize=16)
@@ -132,4 +149,6 @@ def plot_data(m1, m2, saveFig=None):
     if saveFig: fig.savefig(saveFig)
     show()
     
-print(interp_data(18, 16))
+# save_data(20, 5)
+# plot_data(20, 10)
+# print(find_names(20, 16))
