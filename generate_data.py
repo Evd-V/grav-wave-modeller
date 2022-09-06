@@ -21,6 +21,7 @@ def save_data(m1, m2, tS=-.05, tF=.05):
 
     t, hP, hC = waveObject.hMerger(timeRange)       # Wave
 
+        # Saving data in column format
     np.savetxt(fName, np.array([*zip(*[timeRange[1:], hP, hC])]))
 
 
@@ -45,7 +46,7 @@ def mass_ranges():
     
     fileList = os.listdir(path1 + path2)    # List of files in database
 
-    primList, secList = [], []              # Lists to store data in
+    primList, secList = [25], []              # Lists to store data in
 
     for file in fileList:                   # Looping over file names
 
@@ -114,7 +115,7 @@ def find_names(m1, m2):
         # Retrieving file names
     for mP in primMass[primInd]:        # Looping over primary masses
 
-        fName = "merger" + str(mP)      # Primary mass
+        fName = "./merger_data/" + "merger" + str(mP)    # Primary mass
 
         for mS in secMass[secInd]:      # Looping over secondary masses
             
@@ -124,13 +125,47 @@ def find_names(m1, m2):
     return fNames
 
 def open_data(m1, m2):
-    return [np.loadtxt(f, delimiter='') for f in find_names(m1, m2)]
+    return [np.loadtxt(f, delimiter=" ") for f in find_names(m1, m2)]
+
+def interp_entries(m1, m2):
+    """ Interpolate data, for now only linear interpolation """
+
+    data = open_data(m1, m2)        # Reading data files
+    L =  len(data[0][0])            # Should be equal to 3
+
+        # !!!! Add weights!!!!
+    if len(data) == 2:              # 1 interpolation required
+
+        intL2 = [(data[0][:,ind] + data[1][:,ind]) * .5
+                  for ind in range(L)]
+
+        return np.array(intL2)
+    
+
+    elif len(data) == 4:            # 3 interpolations required
+
+            # First interpolating secondary masses
+        intOne = [(data[0][:,ind] + data[1][:,ind]) * .5
+                  for ind in range(L)]
+        
+        intTwo = [(data[2][:,ind] + data[3][:,ind]) * .5
+                  for ind in range(L)]
+                
+            # Interpolating primary masses
+        intL4 = [(np.array(intOne)[:,ind] + np.array(intTwo)[:,ind]) * .5
+                  for ind in range(L)]
+
+        return np.array(intL4)
+    
+    else:
+        raise ValueError("Invalid data length")
 
 
 def plot_data(m1, m2, saveFig=None):
     """ Plot data by reading file """
 
-    data = read_data(m1, m2)
+    # data = read_data(m1, m2)
+    data = interp_entries(m1, m2)
 
     # Plotting
     fig = figure(figsize=(14,7))
@@ -149,6 +184,10 @@ def plot_data(m1, m2, saveFig=None):
     if saveFig: fig.savefig(saveFig)
     show()
     
-# save_data(20, 5)
+# save_data(25, 15)
+# save_data(25, 20)
 # plot_data(20, 10)
 # print(find_names(20, 16))
+
+# data = interp_entries(22, 18)
+plot_data(22, 18)
