@@ -127,17 +127,38 @@ def find_names(m1, m2):
 def open_data(m1, m2):
     return [np.loadtxt(f, delimiter=" ") for f in find_names(m1, m2)]
 
+def weights(m1, m2):
+    """ Give weights to files for more accurate interpolation """
+
+    primMass, secMass = mass_ranges()       # Prim and sec masses in database
+    primInd, secInd = find_inds(m1, m2)     # Find indices of closest values
+
+    def linear_weight(x):
+        """ Simple linear function for weights """
+        return 1 - .2 * x
+
+        # Finding the weights
+    primWeights = [linear_weight(abs(m1-mP)) for mP in primMass[primInd]]
+    secWeights = [linear_weight(abs(m2-mS)) for mS in secMass[secInd]]
+
+    return primWeights, secWeights
+
+
 def interp_entries(m1, m2):
     """ Interpolate data, for now only linear interpolation """
 
     data = open_data(m1, m2)        # Reading data files
     L =  len(data[0][0])            # Should be equal to 3
+    primW, secW = weights(m1, m2)   # Finding the weights
 
-        # !!!! Add weights!!!!
     if len(data) == 2:              # 1 interpolation required
 
-        intL2 = [(data[0][:,ind] + data[1][:,ind]) * .5
-                  for ind in range(L)]
+            # Not the prettiest, but it works
+        if len(primW) == 1: wL2 = primW
+        else: wL2 = secW
+
+        intL2 = [data[0][:,ind]*wL2[0] + data[1][:,ind]*wL2[1]
+                 for ind in range(L)]
 
         return np.array(intL2)
     
@@ -145,14 +166,14 @@ def interp_entries(m1, m2):
     elif len(data) == 4:            # 3 interpolations required
 
             # First interpolating secondary masses
-        intOne = [(data[0][:,ind] + data[1][:,ind]) * .5
+        intOne = [data[0][:,ind]*secW[0] + data[1][:,ind]*secW[1]
                   for ind in range(L)]
         
-        intTwo = [(data[2][:,ind] + data[3][:,ind]) * .5
+        intTwo = [data[2][:,ind]*secW[0] + data[3][:,ind]*secW[1]
                   for ind in range(L)]
                 
             # Interpolating primary masses
-        intL4 = [(np.array(intOne)[:,ind] + np.array(intTwo)[:,ind]) * .5
+        intL4 = [np.array(intOne)[ind]*primW[0] + np.array(intTwo)[ind]*primW[1]
                   for ind in range(L)]
 
         return np.array(intL4)
@@ -171,8 +192,8 @@ def plot_data(m1, m2, saveFig=None):
     fig = figure(figsize=(14,7))
     ax = fig.add_subplot(111)
 
-    ax.plot(data[:,0], data[:,1], 'b', label=r"$h+$")
-    ax.plot(data[:,0], data[:,2], 'r--', label=r"$h_x$")
+    ax.plot(data[0], data[1], 'b', label=r"$h+$")
+    ax.plot(data[0], data[2], 'r--', label=r"$h_x$")
 
     ax.set_xlabel(r"Time ($M_\odot$)", fontsize=16)
     ax.set_ylabel("Amplitude", fontsize=16)
@@ -190,4 +211,5 @@ def plot_data(m1, m2, saveFig=None):
 # print(find_names(20, 16))
 
 # data = interp_entries(22, 18)
-plot_data(22, 18)
+print(weights(22, 18))
+# plot_data(22, 18)
