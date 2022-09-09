@@ -222,7 +222,7 @@ def plot_multiple(primM, secM, hPP=True, hCP=False, sF=None):
     ax.legend(fontsize=16)
     ax.grid()
 
-    if sF: fig.savefig(sF)
+    if sF: fig.savefig(str(sF))
     show()
 
 
