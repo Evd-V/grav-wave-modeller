@@ -7,7 +7,7 @@ import merger as mg
 import boundaries as bo
 
 
-def save_data(m1, m2, tS=-.05, tF=.05):
+def save_data(m1, m2, tS=-.025, tF=.025, nT=250):
     """ Save data of merger """
 
         # Creating consistent file names
@@ -16,7 +16,7 @@ def save_data(m1, m2, tS=-.05, tF=.05):
 
     M1, M2 = bo.geom_units(m1), bo.geom_units(m2)
     waveObject = mg.merger_wave(M1, M2)             # Creating merger wave object
-    timeRange = np.linspace(tS, tF, 250)            # Default time range
+    timeRange = np.linspace(tS, tF, nT)             # Default time range
     saveTime = np.copy(timeRange)
 
     t, hP, hC = waveObject.hMerger(timeRange)       # Wave
@@ -151,11 +151,14 @@ def interp_entries(m1, m2):
     L =  len(data[0][0])            # Should be equal to 3
     primW, secW = weights(m1, m2)   # Finding the weights
 
+    if len(data) == 1:              # No interpolation required
+        return data[0]
+
     if len(data) == 2:              # 1 interpolation required
 
             # Not the prettiest, but it works
-        if len(primW) == 1: wL2 = primW
-        else: wL2 = secW
+        if len(primW) == 1: wL2 = secW
+        else: wL2 = primW
 
         intL2 = [data[0][:,ind]*wL2[0] + data[1][:,ind]*wL2[1]
                  for ind in range(L)]
@@ -180,6 +183,47 @@ def interp_entries(m1, m2):
     
     else:
         raise ValueError("Invalid data length")
+
+
+def plot_multiple(primM, secM, hPP=True, hCP=False, sF=None):
+    """ Plot multiple waveforms """
+
+    if (not hPP) and (not hCP):
+        raise ValueError("Need to plot either + or x polarization")
+
+        # Loading the data
+    data = [interp_entries(primM[i], secM[i]) 
+            for i in range(len(primM))]
+    
+    pMR, sMR = mass_ranges()        # Primary and secondary mass ranges
+
+        # Plotting
+    fig = figure(figsize=(14,7))
+    ax = fig.add_subplot(1,1,1)
+
+        # Looping over combinations m_1 and m_2
+    for ind, comb in enumerate(data):
+
+        m1, m2 = primM[ind], secM[ind]
+        lab = fr"$m_1 =$ {m1}; $m_2 =$ {m2}"
+
+            # Ugly, fix?
+        if (m1 in pMR) and (m2 in sMR):
+            tV, hP, hC = comb[:,0], comb[:,1], comb[:,2]
+        else: tV, hP, hC = comb[0], comb[1], comb[2]
+
+        if hPP: ax.plot(tV, hP, label=r"$h_+$:"+lab)
+        if hCP: ax.plot(tV, hC, label=r"$h_x$:"+lab)        
+    
+    ax.set_xlabel("Time", fontsize=16)
+    ax.set_ylabel("Strain", fontsize=16)
+    ax.tick_params(axis="both", labelsize=16)
+
+    ax.legend(fontsize=16)
+    ax.grid()
+
+    if sF: fig.savefig(sF)
+    show()
 
 
 def plot_data(m1, m2, saveFig=None):
@@ -207,9 +251,10 @@ def plot_data(m1, m2, saveFig=None):
     
 # save_data(25, 15)
 # save_data(25, 20)
-# plot_data(20, 10)
-# print(find_names(20, 16))
 
 # data = interp_entries(22, 18)
-print(weights(22, 18))
 # plot_data(22, 18)
+
+primMass = [20, 23]
+secMass = [6, 16]
+plot_multiple(primMass, secMass)
