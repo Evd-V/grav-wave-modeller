@@ -15,8 +15,8 @@ class merger_wave(object):
     def __init__(self, m1, m2):
         """ Initialization """
         
-        self.m1, self.m2 = m1.kg, m2.kg                     # Masses in kg
-        self.M = self.tot_m()                               # Total mass
+        self.m1, self.m2 = m1.kg, m2.kg                 # Masses in kg
+        self.M = self.tot_m()                           # Total mass
         
         self.d1, self.d2 = m1.dist, m2.dist             # Masses in meters
         self.t1, self.t2 = m1.time, m2.time             # Masses in seconds
