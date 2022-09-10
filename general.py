@@ -39,7 +39,7 @@ def execute_solver(func, h, tLim, y0, *args):
     
     return tRange, np.asarray(yResults)
 
-def adaptive_t(y, h, q=0.9, eps=0.005):
+def adaptive_t(y, h, q=0.95, eps=0.0005):
     """ Solve ODE using adaptive time step """
     return q * eps * sum(h) / abs(sum(y))
 
@@ -56,14 +56,15 @@ def execute_euler(func, tLim, *args):
     """ Execute adaptive Euler method """
 
     yV = [0.0337111, 0.03371804]
-    hV = [0.01, 0.0095]
-    t = np.linspace(tLim[0], tLim[1], 500)           # Test
+    hV = [0.01, 0.009]
+    t = np.linspace(tLim[0], tLim[1], 1500)           # Test
 
     y2 = adaptive_euler(func, hV, yV, t)
 
     for n in range(len(t)):
-        yN = adaptive_euler(func, hV[n-2:n], yV[n-2:n], t)
-        hN = adaptive_t(yN[n-2:n], hV[n-2:n], *args)
+
+        yN = adaptive_euler(func, hV[n:n+2], yV[n:n+2], t)
+        hN = adaptive_t(yV[n:n+2], hV[n:n+2], *args)
 
         yV.append(yN)
         hV.append(hN)

@@ -63,7 +63,7 @@ class inspiral_wave(object):
         return term1 * totSum / (self.t1 + self.t2)
     
     
-    def deriv_phi(self, t, phi0, x):
+    def deriv_phi(self, t, phi, x):
         """ Differential equation dPhi/dt """
         return np.power(x, 1.5) / (self.t1 + self.t2)
     
@@ -104,20 +104,26 @@ class inspiral_wave(object):
         return A1 * np.sin(2 * phi) - A2 * np.cos(2 * phi)
     
     
-    def find_phi(self, xV, h, tLim, phi0):
+    def find_phi(self, tLim, phi0, xV):
         """ Find phi(t) """
         
-        tNow = tLim[0]                                      # Lower time boundary
+        # tNow = tLim[0]                                      # Lower time boundary
         
-        tRange = np.arange(tLim[0], tLim[1]+h, h)           # Range of time values
-        yResults = [phi0]                                   # List with results
+        # tRange = np.arange(tLim[0], tLim[1]+h, h)           # Range of time values
+        # yResults = [phi0]                                   # List with results
 
-        for ind in range(len(tRange)-1):
-            yNew = ge.runga_kuta_solver(self.deriv_phi, h, tRange[ind], yResults[ind], 
-                                        xV[ind])
-            yResults.append(yNew)
+        tRange = np.linspace(*tLim, 500)
+        print(xV)
+        solved = solve_ivp(self.deriv_phi, [0, 11.94], [phi0], t_eval=tRange, 
+                           args=(xV))
+
+        # for ind in range(len(tRange)-1):
+        #     yNew = ge.runga_kuta_solver(self.deriv_phi, h, tRange[ind], yResults[ind], 
+        #                                 xV[ind])
+        #     yResults.append(yNew)
         
-        return tRange, np.asarray(yResults)
+        return solved.t, solved.y
+        # return tRange, np.asarray(yResults)
 
 
 class solve_inspiral(object):
@@ -146,6 +152,7 @@ class solve_inspiral(object):
         
             # time and x values
         self.tV, self.xV = self.execute()
+        # self.tV, self.xV = self.test_execute([0, 11.94], 0.0337111)
         
         if self.determine_steps(): self.x2V = self.xV
         else: self.x2V = self.xV[-1]
@@ -163,8 +170,19 @@ class solve_inspiral(object):
         return 0
     
     
+    def test_execute(self, tLim, x0):
+        """ Test Euler method """
+
+        tRange = np.linspace(*tLim, 500)
+        solved = solve_ivp(self.wave.deriv_x, tLim, [x0], t_eval=tRange, 
+                           method="Radau")
+        
+        return solved.t, solved.y
+
+
     def execute(self):
         """ Execute solver """
+
         if self.determine_steps():
             return ge.execute_solver(self.wave.deriv_x, self.steps, self.lims, 
                                      self.x0)
@@ -193,6 +211,10 @@ class solve_inspiral(object):
     
     def func_phi(self, phi0):
         """ Find function phi """
+
+        tV, xV = self.test_execute([0, 11.94], 0.0337111)
+        return self.wave.find_phi([0, 11.94], phi0, xV)
+
         if self.determine_steps():
             return self.wave.find_phi(self.xV, self.steps, self.lims, phi0)
         
@@ -252,14 +274,14 @@ def main():
     multWave = solve_inspiral(M1, M2, stepList, limList)
     tVals, xVals = multWave.execute()
 
-    # for ind, tR in enumerate(tVals):
-    #     print(np.mean(tR[1:]-tR[:-1]))
-    #     print(np.mean(xVals[ind][1:]-xVals[ind][:-1]))
-
+    # xS = bo.x_low(20, 20)
+    xS = 0.0337111
+    tTest, xTest = multWave.test_execute([0, 11.94], xS)
+    # testWave = solve_inspiral(M1, M2, 0.001, [0, 11.94])
 
     timeRange, hPlus, hCross = multWave.h_wave(R)
+    # timeRange, hPlus, hCross = testWave.h_wave(R)
 
-    difX = ge.diff_func(np.asarray(xVals[-1]), np.asarray(tVals[-1]))
 
     matplotlib.rcParams['font.family'] = ['Times']
     
@@ -267,13 +289,11 @@ def main():
     fig = figure(figsize=(14,7))
     ax = fig.add_subplot(1,1,1)
 
-    # ax.plot(tVals[-1], xVals[-1], color="navy")
-    # ax.plot(tVals[-1][1:], 1/(500*difX**2), label="deriv")
-
-    ax.plot(timeRange[1:], hCross/max(hCross), label=r"$h_x$", ls="--", color="red")
-    ax.plot(timeRange[1:], hPlus/max(hCross), label=r"$h_+$", color="navy")
+    ax.plot(tTest, xTest[0], label="test")
+    # ax.plot(timeRange[1:], hCross/max(hCross), label=r"$h_x$", ls="--", color="red")
+    # ax.plot(timeRange[1:], hPlus/max(hCross), label=r"$h_+$", color="navy")
     
-    ax.set_xlim(11.7, 11.926)
+    # ax.set_xlim(11.7, 11.926)
     
     ax.set_xlabel(r"$t$ (s)", fontsize=20)
     ax.set_ylabel(r"strain (normalized)", fontsize=20)
