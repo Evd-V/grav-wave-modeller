@@ -115,7 +115,7 @@ class inspiral_wave(object):
         tRange = np.linspace(*tLim, len(xV[0]))
         xInt = interp1d(tRange, xV[0])              # Interpolation for integration
 
-        solved = solve_ivp(self.deriv_phi, [0, 11.94], [phi0], t_eval=tRange, 
+        solved = solve_ivp(self.deriv_phi, [0, 11.92], [phi0], t_eval=tRange, 
                            args=(xInt,))
 
         # for ind in range(len(tRange)-1):
@@ -151,7 +151,7 @@ class solve_inspiral(object):
         self.lims = tLims
         
             # time and x values
-        self.tV, self.xV = self.test_execute(self.lims, 0.0337111)
+        self.tV, self.xV = self.test_execute(self.lims, self.x0)
         
         if self.determine_steps(): self.x2V = self.xV
         # else: self.x2V = self.xV[-1]
@@ -173,11 +173,16 @@ class solve_inspiral(object):
     def test_execute(self, tLim, x0):
         """ Test Euler method """
 
+        if tLim[1] - tLim[0] < 0:
+            raise ValueError("Start time has to be before end time")
+
+
         tRange = np.linspace(*tLim, 10000)
-        solved = solve_ivp(self.wave.deriv_x, tLim, [x0], t_eval=tRange, 
-                           method="Radau")
+        solved = solve_ivp(self.wave.deriv_x, tLim, [x0], 
+                           method="Radau", dense_output=True)
         
-        return solved.t, solved.y
+
+        return tRange, solved.sol(tRange) #solved.t
 
 
     def execute(self):
@@ -212,7 +217,7 @@ class solve_inspiral(object):
     def func_phi(self, phi0):
         """ Find function phi """
 
-        tV, xV = self.test_execute(self.lims, 0.0337111)
+        tV, xV = self.test_execute(self.lims, self.x0)
         return self.wave.find_phi(self.lims, phi0, xV)
 
         if self.determine_steps():
@@ -271,13 +276,8 @@ def main():
 #     someWave = solve_inspiral(M1, M2, tStep, tLimits)
 #     timeRange, hPlus, hCross = someWave.h_wave(R)
     
-    multWave = solve_inspiral(M1, M2, stepList, [0, 11.94])
+    multWave = solve_inspiral(M1, M2, stepList, [0, 11.92])
     # tVals, xVals = multWave.execute()
-
-    # xS = bo.x_low(20, 20)
-    xS = 0.0337111
-    tTest, xTest = multWave.test_execute([0, 11.94], xS)
-    # testWave = solve_inspiral(M1, M2, 0.001, [0, 11.94])
 
     timeRange, hPlus, hCross = multWave.h_wave(R)
     # timeRange, hPlus, hCross = testWave.h_wave(R)
