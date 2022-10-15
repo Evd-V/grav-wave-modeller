@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.constants import G
-from scipy.integrate import solve_ivp, quad
+from scipy.integrate import solve_ivp, quad, Radau
 from scipy.interpolate import interp1d
 from matplotlib.pyplot import figure, show
 import matplotlib
@@ -115,7 +115,7 @@ class inspiral_wave(object):
         tRange = np.linspace(*tLim, len(xV[0]))
         xInt = interp1d(tRange, xV[0])              # Interpolation for integration
 
-        solved = solve_ivp(self.deriv_phi, [0, 11.92], [phi0], t_eval=tRange, 
+        solved = solve_ivp(self.deriv_phi, tLim, [phi0], t_eval=tRange, 
                            args=(xInt,))
 
         # for ind in range(len(tRange)-1):
@@ -171,18 +171,77 @@ class solve_inspiral(object):
     
     
     def test_execute(self, tLim, x0):
-        """ Test Euler method """
+        """ Test Radau method """
 
         if tLim[1] - tLim[0] < 0:
             raise ValueError("Start time has to be before end time")
 
 
-        tRange = np.linspace(*tLim, 10000)
-        solved = solve_ivp(self.wave.deriv_x, tLim, [x0], 
-                           method="Radau", dense_output=True)
+        tS = False
+        t, dt = 0, 1
+
+        tL, xL = [], []
+
+        while not tS:
+            tInteg = np.linspace(t, t+dt, 100)   # Integration times
+            integ = solve_ivp(self.wave.deriv_x, [t, t+dt], [x0], 
+                              method="Radau", t_eval=tInteg)
+
+            tL.append(integ.t)
+            xL.append(integ.y)
+
+            t += dt                     # To next time step
+
+            # print(t+dt)
+            # print(integ.t[-1])
+
+            if integ.t[-1] != t:
+                tS = integ.t[-1]        # Stiffness time
+                t -= dt                 # To previous time step
+                dt = (tS-t)/15          # Decrease time step by factor 15
+
+            x0 = integ.y[0][-1]         # New initial condition
+
+        for i in range(10):
+            tInteg = np.linspace(t, t+dt, 100)
+            integ = solve_ivp(self.wave.deriv_x, [t, t+dt], [x0], 
+                              method="Radau", t_eval=tInteg)
+            
+            tL.append(integ.t)
+            xL.append(integ.y)
+
+            t += dt                     # Update time step
+            x0 = integ.y[0][-1]         # Update initial condition
+
+        t -= dt
+        tToGo = tS - t
+        dt = tToGo / 15
+
+        for i in range(16):
+            tInteg = np.linspace(t, t+dt, 100)
+            integ = solve_ivp(self.wave.deriv_x, [t, t+dt], [x0], 
+                              method="Radau", t_eval=tInteg)
+
+            tL.append(integ.t)
+            xL.append(integ.y)
+
+            t += dt                     # Update time step
+            x0 = integ.y[0][-1]         # Update initial condition
+            
+
+        # tRange = np.linspace(*tLim, 10000)
+        # solved = solve_ivp(self.wave.deriv_x, tLim, [x0], 
+        #                    method="Radau", dense_output=True)
         
 
-        return tRange, solved.sol(tRange) #solved.t
+        # solved = Radau(self.wave.deriv_x, tLim[0], [x0], tLim[1])
+
+        tFull, xFull = [], []
+        for ind, tList in enumerate(tL):
+            tFull.append(tList)
+            xFull.append(xL[ind])
+
+        return np.array(tFull), np.array(xL) #tRange, solved.sol(tRange) #solved.t
 
 
     def execute(self):
@@ -276,7 +335,7 @@ def main():
 #     someWave = solve_inspiral(M1, M2, tStep, tLimits)
 #     timeRange, hPlus, hCross = someWave.h_wave(R)
     
-    multWave = solve_inspiral(M1, M2, stepList, [0, 11.92])
+    multWave = solve_inspiral(M1, M2, stepList, [0, 11.93])
     # tVals, xVals = multWave.execute()
 
     timeRange, hPlus, hCross = multWave.h_wave(R)
@@ -293,7 +352,8 @@ def main():
     ax.plot(timeRange[1:], hCross/max(hCross), label=r"$h_x$", ls="--", color="red")
     ax.plot(timeRange[1:], hPlus/max(hCross), label=r"$h_+$", color="navy")
     
-    ax.set_xlim(11.7, 11.95)
+    ax.set_xlim(11.7, 11.94)
+    # ax.set_ylim(-1.2, 1.2)
     
     ax.set_xlabel(r"$t$ (s)", fontsize=20)
     ax.set_ylabel(r"strain (normalized)", fontsize=20)
